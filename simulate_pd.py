@@ -18,6 +18,7 @@ from utils import (
     plot_particle_distr,
     calc_vol_frac,
     calc_molecule_in_nanop,
+    mass_to_nformula_unit,
 )
 
 # Geometry of the system
@@ -47,15 +48,14 @@ x_width_m = 0.01  # 1 cm
 y_width_m = 0.005  # 0.5 cm
 z_width_m = 0.03  # 3 cm
 
-## Starting Position of magnet
+## Starting Position of magnet center
 x_start_m = 0 + x_width_s / 2
 y_start_m = 0 + y_width_m / 2
 z_start_m = 0 + z_width_m / 2
 
 
 # Calculate the Magnetic Field inside the composite structure
-
-## Magnetic moment of the commercial magnet
+# Magnetic moment of the commercial magnet
 m_source = (0, 0, 0.45 * 5)  # In Tesla
 
 # define the magnet
@@ -64,7 +64,7 @@ magnet = magpy.magnet.Cuboid(
     dimension=(x_width_m, y_width_m, z_width_m),  # in SI Units (m)
     position=(x_start_m, y_start_m, z_start_m),
 )
-print(magnet.position)
+print("Position of magnet : ", magnet.position)
 
 # magpy.show(magnet)
 s_grid = np.swapaxes(s_grid, 0, 3)
@@ -143,15 +143,19 @@ mag_mom_per_Fe = [3, 4]
 cos_theta_range = [-1, 1]
 # mu_cos_theta = gen_mu_cos_theta()
 bohr_mag_to_J_per_T = 9.274009994 * 1e-24
-# Let's consider 200 nm has 100 Fe atom
-natom_in_200nm = 2 * calc_molecule_in_nanop(200)
+
 vol_frac_nano = calc_vol_frac(20, 20)
-mu_range = np.array(mag_mom_per_Fe) * natom_in_200nm  # bohr-magneton
-n_div = 101
+# Total number of Grid point and number to be occupied by nanoparticles
 ngrid_point = len(strip.point_data["pos"])  # number of grid point
 noccup = int(
     ngrid_point * vol_frac_nano
 )  # Total number of points to be occupied by nanoparticle
+
+# Let's consider 200 nm has 100 Fe atom
+mass_per_particle = 20 / noccup
+natom_in_particle = 2 * mass_to_nformula_unit(mass_per_particle)
+mu_range = np.array(mag_mom_per_Fe) * natom_in_particle  # bohr-magneton
+n_div = 101
 
 # Generate random grid points to occupy
 gridp_to_occupy = np.random.randint(0, ngrid_point, size=noccup)

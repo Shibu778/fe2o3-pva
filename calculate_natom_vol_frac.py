@@ -25,3 +25,8 @@ molar_mass_fe2o3 = 159.687  # g/mol
 fe2o3_in_mol = mass / molar_mass_fe2o3  # mol
 number_of_fe = fe2o3_in_mol * avogadro_number
 print("Number of Fe atom : ", number_of_fe)
+
+# Calculate the n_atom in each nanoparticle (other way)
+ngrid_point = 1250000
+noccup = ngrid_point * vol_frac
+mass_one_nanop = mass_fe2o3 / noccup

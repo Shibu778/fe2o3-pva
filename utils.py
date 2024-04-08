@@ -143,26 +143,27 @@ def plot_scalar_gradient(strip, key="B_mag", plot=False):
     return mesh_g
 
 
-def plot_scalar_force(mesh):
+def plot_scalar_force(mesh, unit="(uN)", factor=1e6):
     """
     Plots the three component of force.
     """
     dargs = dict(
         scalars="force",
     )
+    mesh.point_data["force"] *= factor
     pl = pv.Plotter(shape=(2, 2))
     pl.subplot(0, 0)
     pl.add_mesh(mesh, **dargs)
-    pl.add_text("|F| (N)", color="k")
+    pl.add_text("|F| " + unit, color="k")
     pl.subplot(0, 1)
     pl.add_mesh(mesh.copy(), component=0, **dargs)
-    pl.add_text("Fx (N)", color="k")
+    pl.add_text("Fx " + unit, color="k")
     pl.subplot(1, 0)
     pl.add_mesh(mesh.copy(), component=1, **dargs)
-    pl.add_text("Fy (N)", color="k")
+    pl.add_text("Fy " + unit, color="k")
     pl.subplot(1, 1)
     pl.add_mesh(mesh.copy(), component=2, **dargs)
-    pl.add_text("Fz (N)", color="k")
+    pl.add_text("Fz " + unit, color="k")
     pl.link_views()
     pl.camera_position = "iso"
     pl.background_color = "white"
@@ -252,6 +253,12 @@ def calc_molecule_in_nanop(diameter, molar_mass=molar_mass_fe2o3):
     diameter : float (in nm)
         diameter of the nanoparticle in nanometer
 
+    molar_mass : float (in g/mol)
+        molar mass of the molecule
+
+    Return :
+    number_of_molecules : int
+        Number of molecules in nanoparticle
     """
     radius = diameter * one_nm_in_cm / 2  # cm
     volume = (4 / 3) * np.pi * radius * 3  # cm^3
@@ -260,3 +267,15 @@ def calc_molecule_in_nanop(diameter, molar_mass=molar_mass_fe2o3):
     number_of_molecule = number_in_mol * avogadro_number
     print("Number of molecule : ", number_of_molecule)
     return number_of_molecule
+
+
+def mass_to_nformula_unit(mass, molar_mass=molar_mass_fe2o3):
+    """
+    This returns number of formula unit in mass.
+    """
+    return (mass / molar_mass) * avogadro_number
+
+
+# TODO: Number of 200nm nanoparticle put into the grid may not sum off to
+# give the intial weight of the nanoparticle
+# in reality both should match
