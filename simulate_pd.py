@@ -19,6 +19,9 @@ from utils import (
     calc_vol_frac,
     calc_molecule_in_nanop,
     mass_to_nformula_unit,
+    plot_tot_force,
+    get_div_info,
+    plot_div_force,
 )
 
 # Geometry of the system
@@ -138,7 +141,7 @@ mesh_g = plot_scalar_gradient(strip)
 strip["grad_B"] = mesh_g["gradient"]
 
 # Force calculations
-np.random.seed(5)
+np.random.seed(6)
 mag_mom_per_Fe = [3, 4]
 cos_theta_range = [-1, 1]
 # mu_cos_theta = gen_mu_cos_theta()
@@ -183,8 +186,14 @@ factor = np.expand_dims(factor, 1)
 strip.point_data["force"] = factor * strip.point_data["grad_B"] * bohr_mag_to_J_per_T
 
 # Plot force magnitude, x, y and z components
-plot_scalar_force(strip)
+# plot_scalar_force(strip)
 
 # Plot the particle distribution
 # plot_particle_contour(strip)
 # plot_particle_distr(strip, gridp_to_occupy, 10)
+
+# mag_geo = [x_start_m, x_width_m, y_start_m, y_width_m, z_start_m, z_width_m]
+# plot_tot_force(strip, mag_geo=mag_geo, plot_magnet=False)
+div_info = get_div_info(strip)
+# print(div_info)
+plot_div_force(strip, div_info, scale=1)
