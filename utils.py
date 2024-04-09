@@ -3,64 +3,6 @@ from matplotlib import pyplot as plt
 import pyvista as pv
 
 
-def dipole(m, r, r0):
-    """Calculate a field in point r created by a dipole moment m located in r0.
-    Spatial components are the outermost axis of r and returned B.
-
-    Reference : https://michal.rawlik.pl/2015/03/12/magnetic-dipole-in-python/
-
-    Parameters:
-    ===========
-    m : list or np.array
-        x, y and z component of magnetic moment
-
-    r : list or np.array
-        x, y, z coordinate of point or points where we need the value of B
-
-    r0 : list or np.array
-        x, y, z coordinate of point where the magnetic dipole lies
-
-    Returns:
-    ========
-    B : np.array
-        x, y and z component of magnetic field vector at given r
-
-    """
-    # we use np.subtract to allow r and r0 to be a python lists, not only np.array
-    R = np.subtract(np.transpose(r), r0).T
-
-    # assume that the spatial components of r are the outermost axis
-    norm_R = np.sqrt(np.einsum("i...,i...", R, R))
-
-    # calculate the dot product only for the outermost axis,
-    # that is the spatial components
-    m_dot_R = np.tensordot(m, R, axes=1)
-
-    # tensordot with axes=0 does a general outer product - we want no sum
-    B = 3 * m_dot_R * R / norm_R**5 - np.tensordot(m, 1 / norm_R**3, axes=0)
-
-    # include the physical constant
-    B *= 1e-7
-
-    return B
-
-
-# Use
-# 3D
-# dipole(m=[1, 2, 3], r=[1, 1, 2], r0=[0, 0, 0])
-
-# 2D
-
-# X = np.linspace(-1, 1)
-# Y = np.linspace(-1, 1)
-
-# Bx, By = dipole(m=[0, 0.1], r=np.meshgrid(X, Y), r0=[-0.2,0.1])
-
-# plt.figure(figsize=(8, 8))
-# plt.streamplot(X, Y, Bx, By)
-# plt.margins(0, 0)
-
-
 def plot_B_field(mesh):
     """
     Plots the Vector field in a given object
@@ -276,6 +218,130 @@ def mass_to_nformula_unit(mass, molar_mass=molar_mass_fe2o3):
     return (mass / molar_mass) * avogadro_number
 
 
-# TODO: Number of 200nm nanoparticle put into the grid may not sum off to
-# give the intial weight of the nanoparticle
-# in reality both should match
+def plot_tot_force(
+    strip,
+    mag_geo=None,
+    plot_magnet=False,
+    scale=1,
+    factor=1e6,
+    unit="uN",
+):
+    """
+    Plots the force distribution on the strip and total force vector on the center of the strip.
+    Also optionally plots the magnet if necessary data are present.
+
+    Parameters:
+    ===========
+    mag_geo : list (len = 6)
+        Stores the magnets (start_x, width_x, start_y, width_y, start_z, width_z)
+    """
+    total_force = sum(strip.point_data["force"])
+    direction = total_force
+    cent = np.array(
+        [
+            ((strip.bounds[0] + strip.bounds[1]) / 2),
+            ((strip.bounds[2] + strip.bounds[3]) / 2),
+            ((strip.bounds[4] + strip.bounds[5]) / 2),
+        ]
+    )
+    pl = pv.Plotter()
+    pl.add_mesh(
+        strip,
+        scalars=strip.point_data["force"] * factor,
+        scalar_bar_args={"title": "Force (" + unit + ")"},
+    )
+    pl.add_arrows(
+        cent,
+        direction,
+        mag=scale,
+        label="Total Force = "
+        + str(np.round(np.linalg.norm(total_force) * factor, 2))
+        + " "
+        + unit,
+        color="g",
+    )
+    pl.add_legend(bcolor="w", face=None)
+    if plot_magnet:
+        try:
+            magnet = pv.Cube(
+                bounds=(
+                    mag_geo[0],
+                    mag_geo[0] + mag_geo[1],
+                    mag_geo[2],
+                    mag_geo[2] + mag_geo[3],
+                    mag_geo[4],
+                    mag_geo[4] + mag_geo[5],
+                )
+            )
+            pl.add_mesh(magnet, color="k")
+        except:
+            ValueError("Please provide proper value of magnet's geometry (mag_geo)!!")
+
+    pl.add_axes(line_width=5)
+    pl.show()
+
+
+def get_center(list_of_pos):
+    list_of_pos = np.array(list_of_pos)
+    return sum(list_of_pos) / len(list_of_pos)
+
+
+def get_div_info(strip, ndiv=10, axis_of_div=0):
+    """
+    Divides the given strip into ndiv, along axis_of_div.
+    Returns the center of each division and the total force
+    in that division.
+    """
+    minv = strip.points[0][axis_of_div]
+    maxv = strip.points[-1][axis_of_div]
+    div_array = np.linspace(minv, maxv, ndiv + 1)
+    div_info = []
+    for i in range(ndiv):
+        indices = []
+        positions = []
+        info = {
+            "indices": [],  # grid indices in the division
+            "center": [],  # Center of the division
+            "tdiv_force": [],  # Total force on division
+        }
+        indices = np.where(
+            (strip.points[:, axis_of_div] >= div_array[i])
+            & (strip.points[:, axis_of_div] <= div_array[i + 1])
+        )[0]
+        info["indices"] = indices
+        info["center"] = get_center(strip.points[indices])
+        info["tdiv_force"] = sum(strip.point_data["force"][indices])
+        div_info.append(info)
+    return div_info
+
+
+def plot_div_force(strip, div_info, scale=1, factor=1e6, unit="uN", equal_length=False):
+    """
+    Plots the total force in the divided strip.
+
+    Parameter:
+    ==========
+    equal_length : bool
+        If true, makes all the length of the force vector equal.
+    """
+    pl = pv.Plotter()
+    pl.add_mesh(
+        strip,
+        scalars=strip.point_data["force"] * factor,
+        scalar_bar_args={"title": "Force on particle (" + unit + ")"},
+        opacity=0.5,
+    )
+    center = np.array([info["center"] for info in div_info])
+    tdiv_force = np.array([info["tdiv_force"] for info in div_info])
+    tdiv_force_mag = np.expand_dims(np.linalg.norm(tdiv_force, axis=1), axis=1)
+    if equal_length:
+        tdiv_force = tdiv_force / tdiv_force_mag
+        scale = 0.005
+    pl.add_arrows(
+        center,
+        tdiv_force,
+        mag=scale,
+        scalar_bar_args={"title": "Force on strip division (N)"},
+    )
+    pl.add_axes(line_width=5)
+    pl.show()
