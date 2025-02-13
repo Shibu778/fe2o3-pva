@@ -5,6 +5,9 @@ If you use the provided code in your project, please consider citing the followi
 
 ACS Appl. Nano Mater. 2024, 7, 17, 21200–21208
 
+Link : https://pubs.acs.org/doi/10.1021/acsanm.4c04627
+DOI: https://doi.org/10.1021/acsanm.4c04627
+
 BibTex
 ```BibTex
 @article{narendhiran2024moisture,
